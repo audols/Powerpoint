@@ -16,8 +16,14 @@ namespace PowerPointGenerator.Models
     /// </summary>
     public class JsonSlide
     {
+        [JsonPropertyName("template")]
+        public string Template { get; set; } = string.Empty;
+
         [JsonPropertyName("title")]
         public string Title { get; set; } = string.Empty;
+
+        [JsonPropertyName("subtitle")]
+        public string Subtitle { get; set; } = string.Empty;
 
         [JsonPropertyName("description")]
         public string Description { get; set; } = string.Empty;
@@ -27,5 +33,32 @@ namespace PowerPointGenerator.Models
 
         [JsonPropertyName("layout")]
         public string Layout { get; set; } = string.Empty;
+
+        [JsonPropertyName("images")]
+        public List<JsonImage> Images { get; set; } = new List<JsonImage>();
+    }
+
+    /// <summary>
+    /// Represents an image to be included in a slide
+    /// </summary>
+    public class JsonImage
+    {
+        /// <summary>
+        /// Path to the image file
+        /// </summary>
+        [JsonPropertyName("image_file")]
+        public string FilePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Title of the image file
+        /// </summary>
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Subtitle of the image file
+        /// </summary>
+        [JsonPropertyName("subtitle")]
+        public string Subtitle { get; set; } = string.Empty;
     }
 }

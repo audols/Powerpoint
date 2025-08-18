@@ -63,9 +63,13 @@ namespace PowerPointGenerator.Services
 
                 // Open the copied template for editing
                 using var document = PresentationDocument.Open(outputPath, true);
+
+                await CreateSlidesFromTemplateAsync(document, content);
                 
-                await ReplaceTemplatePlaceholdersAsync(document, content);
-                
+                // Remove the last 5 template slides from the document
+                var removedCount = RemoveTemplateSlides(document);
+                Console.WriteLine($"Removed {removedCount} slides from the end of the presentation");
+
                 document.Save();
                 return outputPath;
             }
@@ -658,6 +662,44 @@ namespace PowerPointGenerator.Services
         }
 
         /// <summary>
+        /// Use slide template to create new PowerPoint 
+        /// </summary>
+        private async Task CreateSlidesFromTemplateAsync(PresentationDocument document, PresentationContent content)
+        {
+            var slideIndex = 0;
+
+            foreach (var slideContent in content.Slides)
+            {
+                Console.WriteLine($"Slide template is: {slideContent.Template}");
+                switch (slideContent.Template)
+                {
+                    case "TITLE":
+                        // Duplicate the first slide (index 0) and replace its content
+                        await DuplicateSlideAndReplaceContentAsync(document, 0, slideContent);
+                        break;
+                    case "4 IMAGE FEATURE":
+                        await DuplicateSlideAndReplaceContentAsync(document, 1, slideContent);
+                        break;
+                    case "3 IMAGE DETAIL":
+                        await DuplicateSlideAndReplaceContentAsync(document, 2, slideContent);
+                        break;
+                    case "DETAIL":
+                        await DuplicateSlideAndReplaceContentAsync(document, 3, slideContent);
+                        break;
+                    case "CLOSING":
+                        await DuplicateSlideAndReplaceContentAsync(document, 4, slideContent);
+                        break;
+                    default:
+                        // For any other template type, duplicate the first slide and replace content
+                        await DuplicateSlideAndReplaceContentAsync(document, 3, slideContent);
+                        break;
+                }
+                slideIndex++;
+            }
+        }
+
+
+        /// <summary>
         /// Replaces placeholders in a PowerPoint template with actual content
         /// </summary>
         private async Task ReplaceTemplatePlaceholdersAsync(PresentationDocument document, PresentationContent content)
@@ -704,7 +746,7 @@ namespace PowerPointGenerator.Services
             if (slidesToRemove.Any())
             {
                 Console.WriteLine($"Removing {slidesToRemove.Count} extra slides from template");
-                
+
                 foreach (var slideIdToRemove in slidesToRemove)
                 {
                     try
@@ -753,6 +795,10 @@ namespace PowerPointGenerator.Services
                 {
                     textElement.Text = slideContent.Title;
                 }
+                else if (textElement.Text.Contains("{{SUBTITLE}}") || textElement.Text.Contains("[SUBTITLE]"))
+                {
+                    textElement.Text = slideContent.Subtitle;
+                }
                 else if (textElement.Text.Contains("{{DESCRIPTION}}") || textElement.Text.Contains("[DESCRIPTION]"))
                 {
                     textElement.Text = slideContent.Description;
@@ -760,6 +806,38 @@ namespace PowerPointGenerator.Services
                 else if (textElement.Text.Contains("{{SYNOPSIS}}") || textElement.Text.Contains("[SYNOPSIS]"))
                 {
                     textElement.Text = slideContent.Synopsis;
+                }
+                else if (textElement.Text.Contains("{{IMAGE1 TITLE}}") || textElement.Text.Contains("[IMAGE1 TITLE]"))
+                {
+                    textElement.Text = slideContent.Images[0].Title;
+                }
+                else if (textElement.Text.Contains("{{IMAGE1 SUBTITLE}}") || textElement.Text.Contains("[IMAGE1 SUBTITLE]"))
+                {
+                    textElement.Text = slideContent.Images[0].Subtitle;
+                }
+                else if (textElement.Text.Contains("{{IMAGE2 TITLE}}") || textElement.Text.Contains("[IMAGE2 TITLE]"))
+                {
+                    textElement.Text = slideContent.Images[1].Title;
+                }
+                else if (textElement.Text.Contains("{{IMAGE2 SUBTITLE}}") || textElement.Text.Contains("[IMAGE2 SUBTITLE]"))
+                {
+                    textElement.Text = slideContent.Images[1].Subtitle;
+                }
+                else if (textElement.Text.Contains("{{IMAGE3 TITLE}}") || textElement.Text.Contains("[IMAGE3 TITLE]"))
+                {
+                    textElement.Text = slideContent.Images[2].Title;
+                }
+                else if (textElement.Text.Contains("{{IMAGE3 SUBTITLE}}") || textElement.Text.Contains("[IMAGE3 SUBTITLE]"))
+                {
+                    textElement.Text = slideContent.Images[2].Subtitle;
+                }
+                else if (textElement.Text.Contains("{{IMAGE4 TITLE}}") || textElement.Text.Contains("[IMAGE4 TITLE]"))
+                {
+                    textElement.Text = slideContent.Images[3].Title;
+                }
+                else if (textElement.Text.Contains("{{IMAGE4 SUBTITLE}}") || textElement.Text.Contains("[IMAGE4 SUBTITLE]"))
+                {
+                    textElement.Text = slideContent.Images[3].Subtitle;
                 }
             }
         }
@@ -772,16 +850,17 @@ namespace PowerPointGenerator.Services
             // Find existing images in the slide
             var pictures = slidePart.Slide.Descendants<P.Picture>().ToList();
             Console.WriteLine($"Found {pictures.Count} pictures in template slide");
+            Console.WriteLine($"Found {slideContent.Images.Count} pictures in slide content");
 
             if (!slideContent.Images.Any())
             {
                 Console.WriteLine("No images found in slide content");
-                
+
                 // Remove all image parts from the template slide if no content images
                 if (pictures.Any())
                 {
                     Console.WriteLine($"Removing {pictures.Count} image(s) from template slide");
-                    
+
                     foreach (var picture in pictures)
                     {
                         try
@@ -803,34 +882,37 @@ namespace PowerPointGenerator.Services
                 return;
             }
 
-            var imageToReplace = slideContent.Images.First();
-            Console.WriteLine($"Attempting to replace image with: {imageToReplace.FilePath}");
-            Console.WriteLine($"Image file exists: {File.Exists(imageToReplace.FilePath)}");
-            
-            if (!File.Exists(imageToReplace.FilePath))
+            for (int i=0; i < slideContent.Images.Count; i++)
             {
-                Console.WriteLine($"Image file not found at: {imageToReplace.FilePath}");
-                // If image file doesn't exist, remove the template image instead
-                if (pictures.Any())
-                {
-                    Console.WriteLine("Removing template image since replacement image not found");
-                    pictures.First().Remove();
-                }
-                return;
-            }
+                var image = slideContent.Images[i];
+                Console.WriteLine(image.Title);
+                Console.WriteLine($"Attempting to replace image with: {image.FilePath}");
+                Console.WriteLine($"Image file exists: {File.Exists(image.FilePath)}");
 
-            Console.WriteLine($"Found {pictures.Count} pictures in slide");
+                if (!File.Exists(image.FilePath))
+                {
+                    Console.WriteLine($"Image file not found at: {image.FilePath}");
+                    // If image file doesn't exist, remove the template image instead
+                    if (pictures.Any())
+                    {
+                        Console.WriteLine("Removing template image since replacement image not found");
+                        pictures.First().Remove();
+                    }
+                    return;
+                }
+
+                Console.WriteLine($"Found {pictures.Count} pictures in slide");
             
-            if (pictures.Any())
-            {
-                // Replace the first image found
-                var firstPicture = pictures.First();
-                Console.WriteLine("Replacing first picture found in slide");
-                await ReplaceImageInPictureAsync(slidePart, firstPicture, imageToReplace);
-            }
-            else
-            {
-                Console.WriteLine("No pictures found in slide to replace");
+                if (pictures[i] != null)
+                {
+                    // Replace the first image found
+                    Console.WriteLine("Replacing first picture found in slide");
+                    await ReplaceImageInPictureAsync(slidePart, pictures[i], image);
+                }
+                else
+                {
+                    Console.WriteLine("No pictures found in slide to replace");
+                }
             }
         }
 
@@ -971,6 +1053,187 @@ namespace PowerPointGenerator.Services
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return Task.CompletedTask;
             }
+        }
+
+        /// <summary>
+        /// Duplicates a slide at the specified index and replaces its content
+        /// </summary>
+        /// <param name="document">The presentation document</param>
+        /// <param name="slideIndex">Index of the slide to duplicate (0-based)</param>
+        /// <param name="newSlideContent">Content for the new slide</param>
+        /// <returns>The newly created slide part</returns>
+        private async Task<SlidePart> DuplicateSlideAndReplaceContentAsync(PresentationDocument document, int slideIndex, SlideContent newSlideContent)
+        {
+            var presentationPart = document.PresentationPart;
+            if (presentationPart?.Presentation?.SlideIdList == null)
+                throw new InvalidOperationException("Presentation part is not initialized");
+
+            // Get all slide IDs from the presentation
+            var slideIds = presentationPart.Presentation.SlideIdList.Elements<SlideId>().ToList();
+            
+            if (slideIndex < 0 || slideIndex >= slideIds.Count)
+                throw new ArgumentOutOfRangeException(nameof(slideIndex), $"Slide index {slideIndex} is out of range. Available slides: 0-{slideIds.Count - 1}");
+
+            // Get the slide to duplicate
+            var sourceSlideId = slideIds[slideIndex];
+            var sourceSlidePart = (SlidePart)presentationPart.GetPartById(sourceSlideId.RelationshipId!);
+
+            Console.WriteLine($"Duplicating slide at index {slideIndex}");
+
+            // Create a new slide part
+            var newSlidePart = presentationPart.AddNewPart<SlidePart>();
+
+            // Clone the source slide structure
+            var sourceSlide = sourceSlidePart.Slide;
+            var newSlide = (Slide)sourceSlide.CloneNode(true);
+            newSlidePart.Slide = newSlide;
+
+            // Copy any related parts (like image parts, chart parts, etc.)
+            await CopySlideRelatedPartsAsync(sourceSlidePart, newSlidePart);
+
+            // Calculate next slide ID
+            uint nextSlideId = CalculateNextSlideId(presentationPart);
+
+            // Add the new slide to the presentation after the original slide
+            var newSlideIdEntry = new SlideId()
+            {
+                Id = nextSlideId,
+                RelationshipId = presentationPart.GetIdOfPart(newSlidePart)
+            };
+
+            // Insert the new slide at the end of the slide list
+            presentationPart.Presentation.SlideIdList.Append(newSlideIdEntry);
+
+            Console.WriteLine($"Created new slide with ID: {nextSlideId}");
+
+            // Replace the content of the duplicated slide
+            await ReplaceSlideContentAsync(newSlidePart, newSlideContent);
+
+            Console.WriteLine($"Replaced content for duplicated slide: '{newSlideContent.Title}'");
+
+            return newSlidePart;
+        }
+
+        /// <summary>
+        /// Copies related parts from source slide to new slide (images, charts, etc.)
+        /// </summary>
+        private async Task CopySlideRelatedPartsAsync(SlidePart sourceSlidePart, SlidePart newSlidePart)
+        {
+            try
+            {
+                // Copy image parts
+                foreach (var imagePartRel in sourceSlidePart.GetPartsOfType<ImagePart>())
+                {
+                    var sourceImagePart = imagePartRel;
+                    var newImagePart = newSlidePart.AddNewPart<ImagePart>(sourceImagePart.ContentType);
+                    
+                    // Copy the image data
+                    using (var sourceStream = sourceImagePart.GetStream())
+                    using (var targetStream = newImagePart.GetStream(FileMode.Create))
+                    {
+                        await sourceStream.CopyToAsync(targetStream);
+                    }
+
+                    // Update relationships in the new slide
+                    var sourceRelId = sourceSlidePart.GetIdOfPart(sourceImagePart);
+                    var newRelId = newSlidePart.GetIdOfPart(newImagePart);
+                    
+                    // Update all references to this image in the new slide
+                    UpdateImageReferencesInSlide(newSlidePart.Slide, sourceRelId, newRelId);
+                }
+
+                Console.WriteLine("Successfully copied related parts to new slide");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to copy some related parts: {ex.Message}");
+                // Continue execution as this is not critical for basic duplication
+            }
+        }
+
+        /// <summary>
+        /// Updates image references in a slide from old relationship ID to new relationship ID
+        /// </summary>
+        private void UpdateImageReferencesInSlide(Slide slide, string oldRelId, string newRelId)
+        {
+            // Update all Blip elements that reference the old relationship ID
+            var blips = slide.Descendants<A.Blip>().Where(b => b.Embed?.Value == oldRelId);
+            foreach (var blip in blips)
+            {
+                blip.Embed = newRelId;
+            }
+        }
+
+        /// <summary>
+        /// Calculates the next available slide ID
+        /// </summary>
+        private uint CalculateNextSlideId(PresentationPart presentationPart)
+        {
+            var slideIdList = presentationPart.Presentation.SlideIdList;
+            if (slideIdList == null) return 256;
+
+            var existingIds = slideIdList.Elements<SlideId>().Select(s => s.Id?.Value ?? 0);
+            return existingIds.Any() ? existingIds.Max() + 1 : 256;
+        }
+
+        /// <summary>
+        /// Removes the template slides from the presentation document (first five)
+        /// </summary>
+        /// <param name="document">The presentation document</param>
+        /// <returns>Number of slides actually removed</returns>
+        public int RemoveTemplateSlides(PresentationDocument document)
+        {
+            var presentationPart = document.PresentationPart;
+            if (presentationPart == null)
+            {
+                Console.WriteLine("No PresentationPart found in the document.");
+                return 0;
+            }
+
+            // Get all slide IDs from the presentation
+            var slideIdList = presentationPart.Presentation.SlideIdList;
+            if (slideIdList == null)
+            {
+                Console.WriteLine("No SlideIdList found in the presentation.");
+                return 0;
+            }
+            var slideIds = slideIdList.Elements<SlideId>().ToList();
+
+            Console.WriteLine($"Total slides in presentation: {slideIds.Count}");
+
+            // Get the slides to remove (last N slides)
+            var slidesToRemoveList = slideIds.Take(5).ToList();
+            var removedCount = 0;
+
+            Console.WriteLine($"Removing the first {slidesToRemoveList.Count} slides...");
+
+            foreach (var slideIdToRemove in slidesToRemoveList)
+            {
+                try
+                {
+                    // Get the slide part
+                    var slidePart = (SlidePart)presentationPart.GetPartById(slideIdToRemove.RelationshipId!);
+                    
+                    Console.WriteLine($"Removing slide with relationship ID: {slideIdToRemove.RelationshipId}");
+
+                    // Remove the slide part from the presentation
+                    // Note: OpenXML SDK should automatically clean up associated parts and relationships
+                    presentationPart.DeletePart(slidePart);
+
+                    // Remove the slide ID from the slide list
+                    slideIdToRemove.Remove();
+
+                    removedCount++;
+                    Console.WriteLine($"Successfully removed slide {removedCount}/{slidesToRemoveList.Count}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to remove slide {slideIdToRemove.RelationshipId}: {ex.Message}");
+                }
+            }
+
+            Console.WriteLine($"Successfully removed {removedCount} slides from the presentation");
+            return removedCount;
         }
 
         /// <summary>

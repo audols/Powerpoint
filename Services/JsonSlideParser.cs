@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using PowerPointGenerator.Models;
@@ -67,22 +68,36 @@ namespace PowerPointGenerator.Services
                 var slideContent = new SlideContent
                 {
                     Title = jsonSlide.Title,
+                    Subtitle = jsonSlide.Subtitle,
                     Description = jsonSlide.Description,
-                    LayoutType = ParseLayoutType(jsonSlide.Layout)
+                    LayoutType = ParseLayoutType(jsonSlide.Layout),
+                    Template = jsonSlide.Template ?? "DETAIL"
                 };
 
+                Console.WriteLine($"Processing slide: {slideContent.Title} with layout {slideContent.LayoutType}");
+                Console.WriteLine($"Images found: {slideContent.Images.Count}");
+
                 // Parse image from suggested_image field
-                if (!string.IsNullOrWhiteSpace(jsonSlide.SuggestedImage))
+                if (jsonSlide.Images.Any())
                 {
-                    var imagePath = ExtractImagePathFromSuggestion(jsonSlide.SuggestedImage, imageBasePath);
-                    if (!string.IsNullOrWhiteSpace(imagePath))
+                    foreach (var jsonImage in jsonSlide.Images)
                     {
-                        slideContent.Images.Add(new ImageContent
+                        var imagePath = Path.Combine(imageBasePath, jsonImage.FilePath);
+                        Console.WriteLine($"Checking image path: {imagePath}");
+                        Console.WriteLine($"Image exists: {File.Exists(imagePath)}");
+                        if (File.Exists(imagePath))
                         {
-                            FilePath = imagePath,
-                            AltText = jsonSlide.Title,
-                            Caption = jsonSlide.Description
-                        });
+                            slideContent.Images.Add(new ImageContent
+                            {
+                                FilePath = imagePath,
+                                Title = jsonImage.Title,
+                                Subtitle = jsonImage.Subtitle
+                            });
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Image file not found: {imagePath}");
+                        }
                     }
                 }
 

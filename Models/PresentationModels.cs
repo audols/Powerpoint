@@ -27,9 +27,19 @@ namespace PowerPointGenerator.Models
     public class SlideContent
     {
         /// <summary>
+        /// The template of the slide
+        /// </summary>
+        public string Template { get; set; } = string.Empty;
+
+        /// <summary>
         /// The title of the slide
         /// </summary>
         public string Title { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The subtitle of the slide
+        /// </summary>
+        public string Subtitle { get; set; } = string.Empty;
 
         /// <summary>
         /// The main content/synopsis/description for the slide
@@ -39,10 +49,10 @@ namespace PowerPointGenerator.Models
         /// <summary>
         /// Alternative property name for Synopsis (maps to Description in input)
         /// </summary>
-        public string Description 
-        { 
-            get => Synopsis; 
-            set => Synopsis = value; 
+        public string Description
+        {
+            get => Synopsis;
+            set => Synopsis = value;
         }
 
         /// <summary>
@@ -75,6 +85,16 @@ namespace PowerPointGenerator.Models
         /// Path to the image file
         /// </summary>
         public string FilePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Title of the image file
+        /// </summary>
+        public string Title { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Subtitle of the image file
+        /// </summary>
+        public string Subtitle { get; set; } = string.Empty;
 
         /// <summary>
         /// Alternative text for the image
