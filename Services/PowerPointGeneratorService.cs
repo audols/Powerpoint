@@ -1,4 +1,5 @@
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
 using PowerPointGenerator.Models;
@@ -27,25 +28,423 @@ namespace PowerPointGenerator.Services
         {
             try
             {
-                // Create a new presentation document
-                _presentationDocument = PresentationDocument.Create(outputPath, PresentationDocumentType.Presentation);
+                // Create a presentation at a specified file path. The presentation document type is pptx, by default.
+                using (PresentationDocument presentationDoc = PresentationDocument.Create(outputPath, PresentationDocumentType.Presentation))
+                {
+                    PresentationPart presentationPart = presentationDoc.AddPresentationPart();
+                    presentationPart.Presentation = new Presentation();
 
+                    CreatePresentationParts(presentationPart);
+                    presentationDoc.Save();
+                }
+
+                // Create a new presentation document
+                // _presentationDocument = PresentationDocument.Create(outputPath, PresentationDocumentType.Presentation);
+                // PresentationPart presentationPart = _presentationDocument.AddPresentationPart();
+                // presentationPart.Presentation = new Presentation();
+
+                // CreatePresentationParts(presentationPart, content.Slides);
+
+                // ------------------
                 // Create the presentation parts
-                CreatePresentationParts();
+                // CreatePresentationParts();
 
                 // Set presentation properties
-                SetPresentationProperties(content.Title, content.Author);
+                // SetPresentationProperties(content.Title, content.Author);
 
                 // Create slides
-                await CreateSlidesAsync(content.Slides);
+                // await CreateSlidesAsync(content.Slides);
 
                 // Save the presentation
-                _presentationDocument.Save();
+                // _presentationDocument.Save();
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to create PowerPoint presentation: {ex.Message}", ex);
             }
+        }
+
+        static void CreatePresentationParts(PresentationPart presentationPart)
+        {
+            SlidePart slidePart1;
+            SlideLayoutPart slideLayoutPart1;
+            SlideMasterPart slideMasterPart1;
+            ThemePart themePart1;
+
+            slidePart1 = CreateSlidePart(presentationPart);
+            slideLayoutPart1 = CreateSlideLayoutPart(slidePart1);
+            slideMasterPart1 = CreateSlideMasterPart(slideLayoutPart1);
+            themePart1 = CreateTheme(slideMasterPart1);
+
+            string slideRelId = presentationPart.GetIdOfPart(slidePart1);
+            string layoutRelId = slidePart1.GetIdOfPart(slideLayoutPart1);
+            string masterRelId = slideLayoutPart1.GetIdOfPart(slideMasterPart1);
+
+            SlideMasterIdList slideMasterIdList1 = new SlideMasterIdList(new SlideMasterId() { Id = (UInt32Value)2147483648U, RelationshipId = masterRelId });
+            SlideIdList slideIdList1 = new SlideIdList(new SlideId() { Id = (UInt32Value)256U, RelationshipId = slideRelId });
+            SlideSize slideSize1 = new SlideSize() { Cx = 9144000, Cy = 6858000, Type = SlideSizeValues.Screen4x3 };
+            NotesSize notesSize1 = new NotesSize() { Cx = 6858000, Cy = 9144000 };
+            DefaultTextStyle defaultTextStyle1 = new DefaultTextStyle();
+
+            presentationPart.Presentation.Append(slideMasterIdList1, slideIdList1, slideSize1, notesSize1, defaultTextStyle1);
+
+            slideMasterPart1.AddPart(slideLayoutPart1, layoutRelId); // "rId1"
+
+            presentationPart.AddPart(slideMasterPart1, masterRelId); // "rId1"
+
+            string themeRelId = slideMasterPart1.GetIdOfPart(themePart1);
+            presentationPart.AddPart(themePart1, themeRelId); // "rId5"
+        }
+
+        static SlidePart CreateSlidePart(PresentationPart presentationPart)
+        {
+            SlidePart slidePart1 = presentationPart.AddNewPart<SlidePart>();    //"rId2"
+            slidePart1.Slide = new Slide(
+                    new CommonSlideData(
+                        new ShapeTree(
+                            new P.NonVisualGroupShapeProperties(
+                                new P.NonVisualDrawingProperties() { Id = (UInt32Value)1U, Name = "" },
+                                new P.NonVisualGroupShapeDrawingProperties(),
+                                new ApplicationNonVisualDrawingProperties()),
+                            new GroupShapeProperties(new TransformGroup()),
+                            new P.Shape(
+                                new P.NonVisualShapeProperties(
+                                    new P.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "Title 1" },
+                                    new P.NonVisualShapeDrawingProperties(new ShapeLocks() { NoGrouping = true }),
+                                    new ApplicationNonVisualDrawingProperties(new PlaceholderShape())),
+                                new P.ShapeProperties(),
+                                new P.TextBody(
+                                    new BodyProperties(),
+                                    new ListStyle(),
+                                    new Paragraph(new EndParagraphRunProperties() { Language = "en-US" }))))),
+                    new ColorMapOverride(new MasterColorMapping()));
+            return slidePart1;
+        }
+
+        static SlideLayoutPart CreateSlideLayoutPart(SlidePart slidePart1)
+        {
+            SlideLayoutPart slideLayoutPart1 = slidePart1.AddNewPart<SlideLayoutPart>("rId1"); // "rId1"
+            SlideLayout slideLayout = new SlideLayout(
+            new CommonSlideData(new ShapeTree(
+            new P.NonVisualGroupShapeProperties(
+            new P.NonVisualDrawingProperties() { Id = (UInt32Value)1U, Name = "" },
+            new P.NonVisualGroupShapeDrawingProperties(),
+            new ApplicationNonVisualDrawingProperties()),
+            new GroupShapeProperties(new TransformGroup()),
+            new P.Shape(
+            new P.NonVisualShapeProperties(
+                new P.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "" },
+                new P.NonVisualShapeDrawingProperties(new ShapeLocks() { NoGrouping = true }),
+                new ApplicationNonVisualDrawingProperties(new PlaceholderShape())),
+            new P.ShapeProperties(),
+            new P.TextBody(
+                new BodyProperties(),
+                new ListStyle(),
+                new Paragraph(new EndParagraphRunProperties()))))),
+            new ColorMapOverride(new MasterColorMapping()));
+            slideLayoutPart1.SlideLayout = slideLayout;
+            return slideLayoutPart1;
+        }
+
+        static SlideMasterPart CreateSlideMasterPart(SlideLayoutPart slideLayoutPart1)
+        {
+            SlideMasterPart slideMasterPart1 = slideLayoutPart1.AddNewPart<SlideMasterPart>("rId1"); //"rId1"
+
+            string actualLayoutRelId = slideLayoutPart1.GetIdOfPart(slideMasterPart1);
+
+            SlideMaster slideMaster = new SlideMaster(
+            new CommonSlideData(new ShapeTree(
+            new P.NonVisualGroupShapeProperties(
+            new P.NonVisualDrawingProperties() { Id = (UInt32Value)1U, Name = "" },
+            new P.NonVisualGroupShapeDrawingProperties(),
+            new ApplicationNonVisualDrawingProperties()),
+            new GroupShapeProperties(new TransformGroup()),
+            new P.Shape(
+            new P.NonVisualShapeProperties(
+                new P.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "Title Placeholder 1" },
+                new P.NonVisualShapeDrawingProperties(new ShapeLocks() { NoGrouping = true }),
+                new ApplicationNonVisualDrawingProperties(new PlaceholderShape() { Type = PlaceholderValues.Title })),
+            new P.ShapeProperties(),
+            new P.TextBody(
+                new BodyProperties(),
+                new ListStyle(),
+                new Paragraph())))),
+            new P.ColorMap() { Background1 = A.ColorSchemeIndexValues.Light1, Text1 = A.ColorSchemeIndexValues.Dark1, Background2 = A.ColorSchemeIndexValues.Light2, Text2 = A.ColorSchemeIndexValues.Dark2, Accent1 = A.ColorSchemeIndexValues.Accent1, Accent2 = A.ColorSchemeIndexValues.Accent2, Accent3 = A.ColorSchemeIndexValues.Accent3, Accent4 = A.ColorSchemeIndexValues.Accent4, Accent5 = A.ColorSchemeIndexValues.Accent5, Accent6 = A.ColorSchemeIndexValues.Accent6, Hyperlink = A.ColorSchemeIndexValues.Hyperlink, FollowedHyperlink = A.ColorSchemeIndexValues.FollowedHyperlink },
+            new SlideLayoutIdList(new SlideLayoutId() { Id = (UInt32Value)2147483649U, RelationshipId = actualLayoutRelId }), // "rId1"
+            new TextStyles(new TitleStyle(), new BodyStyle(), new OtherStyle()));
+            slideMasterPart1.SlideMaster = slideMaster;
+
+            return slideMasterPart1;
+        }
+
+        static ThemePart CreateTheme(SlideMasterPart slideMasterPart1)
+        {
+            ThemePart themePart1 = slideMasterPart1.AddNewPart<ThemePart>(); // "rId5"
+            A.Theme theme1 = new A.Theme() { Name = "Office Theme" };
+
+            A.ThemeElements themeElements1 = new A.ThemeElements(
+            new A.ColorScheme(
+            new A.Dark1Color(new A.SystemColor() { Val = A.SystemColorValues.WindowText, LastColor = "000000" }),
+            new A.Light1Color(new A.SystemColor() { Val = A.SystemColorValues.Window, LastColor = "FFFFFF" }),
+            new A.Dark2Color(new A.RgbColorModelHex() { Val = "1F497D" }),
+            new A.Light2Color(new A.RgbColorModelHex() { Val = "EEECE1" }),
+            new A.Accent1Color(new A.RgbColorModelHex() { Val = "4F81BD" }),
+            new A.Accent2Color(new A.RgbColorModelHex() { Val = "C0504D" }),
+            new A.Accent3Color(new A.RgbColorModelHex() { Val = "9BBB59" }),
+            new A.Accent4Color(new A.RgbColorModelHex() { Val = "8064A2" }),
+            new A.Accent5Color(new A.RgbColorModelHex() { Val = "4BACC6" }),
+            new A.Accent6Color(new A.RgbColorModelHex() { Val = "F79646" }),
+            new A.Hyperlink(new A.RgbColorModelHex() { Val = "0000FF" }),
+            new A.FollowedHyperlinkColor(new A.RgbColorModelHex() { Val = "800080" }))
+            { Name = "Office" },
+            new A.FontScheme(
+            new A.MajorFont(
+            new A.LatinFont() { Typeface = "Calibri" },
+            new A.EastAsianFont() { Typeface = "" },
+            new A.ComplexScriptFont() { Typeface = "" }),
+            new A.MinorFont(
+            new A.LatinFont() { Typeface = "Calibri" },
+            new A.EastAsianFont() { Typeface = "" },
+            new A.ComplexScriptFont() { Typeface = "" }))
+            { Name = "Office" },
+            new A.FormatScheme(
+            new A.FillStyleList(
+            new A.SolidFill(new A.SchemeColor() { Val = A.SchemeColorValues.PhColor }),
+            new A.GradientFill(
+                new A.GradientStopList(
+                new A.GradientStop(new A.SchemeColor(new A.Tint() { Val = 50000 },
+                new A.SaturationModulation() { Val = 300000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 0 },
+                new A.GradientStop(new A.SchemeColor(new A.Tint() { Val = 37000 },
+                new A.SaturationModulation() { Val = 300000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 35000 },
+                new A.GradientStop(new A.SchemeColor(new A.Tint() { Val = 15000 },
+                new A.SaturationModulation() { Val = 350000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 100000 }
+                ),
+                new A.LinearGradientFill() { Angle = 16200000, Scaled = true }),
+            new A.NoFill(),
+            new A.PatternFill(),
+            new A.GroupFill()),
+            new A.LineStyleList(
+            new A.Outline(
+                new A.SolidFill(
+                new A.SchemeColor(
+                new A.Shade() { Val = 95000 },
+                new A.SaturationModulation() { Val = 105000 })
+                { Val = A.SchemeColorValues.PhColor }),
+                new A.PresetDash() { Val = A.PresetLineDashValues.Solid })
+            {
+                Width = 9525,
+                CapType = A.LineCapValues.Flat,
+                CompoundLineType = A.CompoundLineValues.Single,
+                Alignment = A.PenAlignmentValues.Center
+            },
+            new A.Outline(
+                new A.SolidFill(
+                new A.SchemeColor(
+                new A.Shade() { Val = 95000 },
+                new A.SaturationModulation() { Val = 105000 })
+                { Val = A.SchemeColorValues.PhColor }),
+                new A.PresetDash() { Val = A.PresetLineDashValues.Solid })
+            {
+                Width = 9525,
+                CapType = A.LineCapValues.Flat,
+                CompoundLineType = A.CompoundLineValues.Single,
+                Alignment = A.PenAlignmentValues.Center
+            },
+            new A.Outline(
+                new A.SolidFill(
+                new A.SchemeColor(
+                new A.Shade() { Val = 95000 },
+                new A.SaturationModulation() { Val = 105000 })
+                { Val = A.SchemeColorValues.PhColor }),
+                new A.PresetDash() { Val = A.PresetLineDashValues.Solid })
+            {
+                Width = 9525,
+                CapType = A.LineCapValues.Flat,
+                CompoundLineType = A.CompoundLineValues.Single,
+                Alignment = A.PenAlignmentValues.Center
+            }),
+            new A.EffectStyleList(
+            new A.EffectStyle(
+                new A.EffectList(
+                new A.OuterShadow(
+                new A.RgbColorModelHex(
+                new A.Alpha() { Val = 38000 })
+                { Val = "000000" })
+                { BlurRadius = 40000L, Distance = 20000L, Direction = 5400000, RotateWithShape = false })),
+            new A.EffectStyle(
+                new A.EffectList(
+                new A.OuterShadow(
+                new A.RgbColorModelHex(
+                new A.Alpha() { Val = 38000 })
+                { Val = "000000" })
+                { BlurRadius = 40000L, Distance = 20000L, Direction = 5400000, RotateWithShape = false })),
+            new A.EffectStyle(
+                new A.EffectList(
+                new A.OuterShadow(
+                new A.RgbColorModelHex(
+                new A.Alpha() { Val = 38000 })
+                { Val = "000000" })
+                { BlurRadius = 40000L, Distance = 20000L, Direction = 5400000, RotateWithShape = false }))),
+            new A.BackgroundFillStyleList(
+            new A.SolidFill(new A.SchemeColor() { Val = A.SchemeColorValues.PhColor }),
+            new A.GradientFill(
+                new A.GradientStopList(
+                new A.GradientStop(
+                new A.SchemeColor(new A.Tint() { Val = 50000 },
+                    new A.SaturationModulation() { Val = 300000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 0 },
+                new A.GradientStop(
+                new A.SchemeColor(new A.Tint() { Val = 50000 },
+                    new A.SaturationModulation() { Val = 300000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 0 },
+                new A.GradientStop(
+                new A.SchemeColor(new A.Tint() { Val = 50000 },
+                    new A.SaturationModulation() { Val = 300000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 0 }),
+                new A.LinearGradientFill() { Angle = 16200000, Scaled = true }),
+            new A.GradientFill(
+                new A.GradientStopList(
+                new A.GradientStop(
+                new A.SchemeColor(new A.Tint() { Val = 50000 },
+                    new A.SaturationModulation() { Val = 300000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 0 },
+                new A.GradientStop(
+                new A.SchemeColor(new A.Tint() { Val = 50000 },
+                    new A.SaturationModulation() { Val = 300000 })
+                { Val = A.SchemeColorValues.PhColor })
+                { Position = 0 }),
+                new A.LinearGradientFill() { Angle = 16200000, Scaled = true })))
+            { Name = "Office" });
+
+            theme1.Append(themeElements1);
+            theme1.Append(new A.ObjectDefaults());
+            theme1.Append(new A.ExtraColorSchemeList());
+
+            themePart1.Theme = theme1;
+            return themePart1;
+
+        }
+
+        void CreatePresentationParts(PresentationPart presentationPart, List<SlideContent> slides)
+        {
+            // // Step 5: Create individual slides that reference the layout
+            // SlidePart slidePart1 = CreateSlidePart(presentationPart, slideLayoutPart1);
+
+            // // Step 6: Set up presentation structure
+            // var slidePart1RelId = presentationPart.GetIdOfPart(slidePart1);
+            // var slideMasterPartToPresentationPartRelId = presentationPart.GetIdOfPart(slideMasterPart1);
+
+            // SlideMasterIdList slideMasterIdList1 = new SlideMasterIdList(new SlideMasterId() { RelationshipId = slideMasterPartToPresentationPartRelId });
+            // SlideIdList slideIdList1 = new SlideIdList(new SlideId() { Id = (UInt32Value)256U, RelationshipId = slidePart1RelId });
+            // SlideSize slideSize1 = new SlideSize() { Cx = 9144000, Cy = 6858000, Type = SlideSizeValues.Screen4x3 };
+            // NotesSize notesSize1 = new NotesSize() { Cx = 6858000, Cy = 9144000 };
+
+            // var defaultTextStyle1 = new DefaultTextStyle();
+
+            // presentationPart.Presentation.Append(
+            //     slideMasterIdList1,
+            //     slideIdList1,
+            //     slideSize1,
+            //     notesSize1,
+            //     defaultTextStyle1);
+
+            // // Step 1: Create slide master first
+            // SlideMasterPart slideMasterPart1 = CreateSlideMasterPart(presentationPart);
+
+            // presentationPart.AddNewPart<SlideMasterPart>();
+
+            // // Step 2: Create slide layout as child of master (not dependent on slide)
+            // SlideLayoutPart slideLayoutPart1 = CreateSlideLayoutPart(slideMasterPart1);
+            // // slideMasterPart1.AddPart(slideLayoutPart1);
+
+            // // Step 3: Create theme for the master
+            // ThemePart themePart1 = CreateTheme(slideMasterPart1);
+
+            // // Step 4: Set up the slide master content
+            // // SetupSlideMaster(slideMasterPart1, slideLayoutPart1);
+            // var slideLayoutPart1RelId = slideMasterPart1.GetIdOfPart(slideLayoutPart1);
+            // SlideMaster slideMaster = new SlideMaster(
+            //     new CommonSlideData(new ShapeTree(
+            //     new P.NonVisualGroupShapeProperties(
+            //     new P.NonVisualDrawingProperties() { Id = (UInt32Value)1U, Name = "" },
+            //     new P.NonVisualGroupShapeDrawingProperties(),
+            //     new ApplicationNonVisualDrawingProperties()),
+            //     new GroupShapeProperties(new TransformGroup()),
+            //     new P.Shape(
+            //     new P.NonVisualShapeProperties(
+            //         new P.NonVisualDrawingProperties() { Id = (UInt32Value)2U, Name = "Title Placeholder 1" },
+            //         new P.NonVisualShapeDrawingProperties(new ShapeLocks() { NoGrouping = true }),
+            //         new ApplicationNonVisualDrawingProperties(new PlaceholderShape() { Type = PlaceholderValues.Title })),
+            //     new P.ShapeProperties(),
+            //     new P.TextBody(
+            //         new BodyProperties(),
+            //         new ListStyle(),
+            //         new Paragraph())))),
+            //     new P.ColorMap() { Background1 = A.ColorSchemeIndexValues.Light1, Text1 = A.ColorSchemeIndexValues.Dark1, Background2 = A.ColorSchemeIndexValues.Light2, Text2 = A.ColorSchemeIndexValues.Dark2, Accent1 = A.ColorSchemeIndexValues.Accent1, Accent2 = A.ColorSchemeIndexValues.Accent2, Accent3 = A.ColorSchemeIndexValues.Accent3, Accent4 = A.ColorSchemeIndexValues.Accent4, Accent5 = A.ColorSchemeIndexValues.Accent5, Accent6 = A.ColorSchemeIndexValues.Accent6, Hyperlink = A.ColorSchemeIndexValues.Hyperlink, FollowedHyperlink = A.ColorSchemeIndexValues.FollowedHyperlink },
+            //     new SlideLayoutIdList(new SlideLayoutId() { Id = (UInt32Value)2147483649U, RelationshipId = slideLayoutPart1RelId }),
+            //     new TextStyles(new TitleStyle(), new BodyStyle(), new OtherStyle())
+            // );
+            // slideMasterPart1.SlideMaster = slideMaster;
+
+            
+            // ----------------------------------
+
+            SlidePart slidePart1 = CreateSlidePart(presentationPart);
+
+            string slidePart1RelId = presentationPart.GetIdOfPart(slidePart1);
+
+            SlideLayoutPart slideLayoutPart1 = CreateSlideLayoutPart(slidePart1);
+            SlideMasterPart slideMasterPart1 = CreateSlideMasterPart(slideLayoutPart1);
+            // SlideMasterPart slideMasterPart1 = CreateSlideMasterPart(presentationPart); //
+            // SlideLayoutPart slideLayoutPart1 = CreateSlideLayoutPart(slideMasterPart1); //
+            // SlidePart slidePart1 = CreateSlidePart(slideLayoutPart1); //
+            // string slidePart1RelId = slideLayoutPart1.GetIdOfPart(slidePart1); //
+
+            string slideLayoutPart1RelId = slideMasterPart1.GetIdOfPart(slideLayoutPart1);
+
+            ThemePart themePart1 = CreateTheme(slideMasterPart1);
+
+            slideMasterPart1.AddPart(slideLayoutPart1, slideLayoutPart1RelId);
+            presentationPart.AddPart(slideMasterPart1);
+            string slideMasterPartToPresentationPartRelId = presentationPart.GetIdOfPart(slideMasterPart1);
+            presentationPart.AddPart(themePart1);
+
+            SlideMasterIdList slideMasterIdList1 = new SlideMasterIdList(new SlideMasterId() { RelationshipId = slideMasterPartToPresentationPartRelId });
+            SlideIdList slideIdList1 = new SlideIdList(new SlideId() { Id = (UInt32Value)256U, RelationshipId = slidePart1RelId });
+            SlideSize slideSize1 = new SlideSize() { Cx = 9144000, Cy = 6858000, Type = SlideSizeValues.Screen4x3 };
+            NotesSize notesSize1 = new NotesSize() { Cx = 6858000, Cy = 9144000 };
+            DefaultTextStyle defaultTextStyle1 = new DefaultTextStyle();
+
+            // // New stuff
+            // uint slideId = (UInt32Value)256U++; // Start slide ID from 257å
+            // // foreach (var slideContent in slides)
+            // // {
+            // SlidePart newSlidePart = CreateSlidePart(presentationPart);
+            // string newSlidePartRelId = presentationPart.GetIdOfPart(newSlidePart);
+
+            // SlideLayoutPart newSlideLayoutPart = CreateSlideLayoutPart(newSlidePart);
+
+            // // Add slide to presentation
+            // var slideIdEntry = new SlideId()
+            // {
+            //     Id = slideId,
+            //     RelationshipId = newSlidePartRelId
+            // };
+            // slideIdList1.Append(slideIdEntry);
+            //     // slideId++;
+            // // }
+
+            presentationPart.Presentation.Append(slideMasterIdList1, slideIdList1, slideSize1, notesSize1, defaultTextStyle1);
         }
 
         /// <summary>
@@ -64,11 +463,7 @@ namespace PowerPointGenerator.Services
                 // Open the copied template for editing
                 using var document = PresentationDocument.Open(outputPath, true);
 
-                await CreateSlidesFromTemplateAsync(document, content);
-                
-                // Remove the last 5 template slides from the document
-                var removedCount = RemoveTemplateSlides(document);
-                Console.WriteLine($"Removed {removedCount} slides from the end of the presentation");
+                await ReplaceTemplatePlaceholdersAsync(document, content);
 
                 document.Save();
                 return outputPath;
@@ -95,9 +490,9 @@ namespace PowerPointGenerator.Services
             var slideMasterPart = presentationPart.AddNewPart<SlideMasterPart>();
             slideMasterPart.SlideMaster = new SlideMaster(
                 new CommonSlideData(new ShapeTree(
-                    new NonVisualGroupShapeProperties(
-                        new NonVisualDrawingProperties() { Id = 1, Name = "" },
-                        new NonVisualGroupShapeDrawingProperties(),
+                    new DocumentFormat.OpenXml.Drawing.NonVisualGroupShapeProperties(
+                        new DocumentFormat.OpenXml.Drawing.NonVisualDrawingProperties() { Id = 1, Name = "" },
+                        new DocumentFormat.OpenXml.Drawing.NonVisualGroupShapeDrawingProperties(),
                         new ApplicationNonVisualDrawingProperties()),
                     new GroupShapeProperties(new A.TransformGroup()))),
                 new ColorMapOverride(new A.MasterColorMapping()));
@@ -106,9 +501,9 @@ namespace PowerPointGenerator.Services
             var slideLayoutPart = slideMasterPart.AddNewPart<SlideLayoutPart>();
             slideLayoutPart.SlideLayout = new SlideLayout(
                 new CommonSlideData(new ShapeTree(
-                    new NonVisualGroupShapeProperties(
-                        new NonVisualDrawingProperties() { Id = 1, Name = "" },
-                        new NonVisualGroupShapeDrawingProperties(),
+                    new DocumentFormat.OpenXml.Drawing.NonVisualGroupShapeProperties(
+                        new DocumentFormat.OpenXml.Drawing.NonVisualDrawingProperties() { Id = 1, Name = "" },
+                        new DocumentFormat.OpenXml.Drawing.NonVisualGroupShapeDrawingProperties(),
                         new ApplicationNonVisualDrawingProperties()),
                     new GroupShapeProperties(new A.TransformGroup()))),
                 new ColorMapOverride(new A.MasterColorMapping()));
@@ -177,19 +572,19 @@ namespace PowerPointGenerator.Services
             var presentationPart = _presentationDocument.PresentationPart;
             var slideIdList = presentationPart.Presentation.SlideIdList;
 
-            uint slideId = 256;
+            uint slideId = (UInt32Value)256U;
 
             foreach (var slideContent in slides)
             {
                 var slidePart = presentationPart.AddNewPart<SlidePart>();
-                
+
                 // Create proper slide structure
                 slidePart.Slide = new Slide(
                     new CommonSlideData(
                         new ShapeTree(
-                            new NonVisualGroupShapeProperties(
-                                new NonVisualDrawingProperties() { Id = 1, Name = "" },
-                                new NonVisualGroupShapeDrawingProperties(),
+                            new DocumentFormat.OpenXml.Drawing.NonVisualGroupShapeProperties(
+                                new DocumentFormat.OpenXml.Drawing.NonVisualDrawingProperties() { Id = 1, Name = "" },
+                                new DocumentFormat.OpenXml.Drawing.NonVisualGroupShapeDrawingProperties(),
                                 new ApplicationNonVisualDrawingProperties()),
                             new GroupShapeProperties(new A.TransformGroup()))),
                     new ColorMapOverride(new A.MasterColorMapping()));
@@ -204,6 +599,7 @@ namespace PowerPointGenerator.Services
                     RelationshipId = presentationPart.GetIdOfPart(slidePart)
                 };
                 slideIdList?.Append(slideIdEntry);
+                slideId++;
             }
         }
 
@@ -222,9 +618,9 @@ namespace PowerPointGenerator.Services
             // Add non-visual group shape properties (required)
             if (shapeTree.NonVisualGroupShapeProperties == null)
             {
-                shapeTree.NonVisualGroupShapeProperties = new NonVisualGroupShapeProperties(
-                    new NonVisualDrawingProperties() { Id = 1, Name = "" },
-                    new NonVisualGroupShapeDrawingProperties(),
+                shapeTree.NonVisualGroupShapeProperties = new DocumentFormat.OpenXml.Presentation.NonVisualGroupShapeProperties(
+                    new DocumentFormat.OpenXml.Drawing.NonVisualDrawingProperties() { Id = 1, Name = "" },
+                    new DocumentFormat.OpenXml.Drawing.NonVisualGroupShapeDrawingProperties(),
                     new ApplicationNonVisualDrawingProperties());
             }
 
@@ -290,7 +686,7 @@ namespace PowerPointGenerator.Services
         /// <summary>
         /// Creates a title text shape with proper formatting
         /// </summary>
-        private Shape CreateTitleTextShape(uint shapeId, string title, long yPosition)
+        private DocumentFormat.OpenXml.Presentation.Shape CreateTitleTextShape(uint shapeId, string title, long yPosition)
         {
             return SlideHelper.CreateFormattedTextShape(shapeId, title, 
                 914400, yPosition, 8229600, 1143000, // Position and size
@@ -300,7 +696,7 @@ namespace PowerPointGenerator.Services
         /// <summary>
         /// Creates a description text shape with proper formatting
         /// </summary>
-        private Shape CreateDescriptionTextShape(uint shapeId, string description, long yPosition)
+        private DocumentFormat.OpenXml.Presentation.Shape CreateDescriptionTextShape(uint shapeId, string description, long yPosition)
         {
             return SlideHelper.CreateFormattedTextShape(shapeId, description,
                 914400, yPosition, 8229600, 1371600, // Position and size
@@ -542,7 +938,7 @@ namespace PowerPointGenerator.Services
         /// <summary>
         /// Creates an image shape with proper embedding
         /// </summary>
-        private Picture CreateImageShape(SlidePart slidePart, ImageContent image, 
+        private DocumentFormat.OpenXml.Presentation.Picture CreateImageShape(SlidePart slidePart, ImageContent image, 
             uint shapeId, long x, long y, long width, long height)
         {
             var imagePart = ImageHelper.CreateImagePart(slidePart, image.FilePath);
@@ -662,44 +1058,6 @@ namespace PowerPointGenerator.Services
         }
 
         /// <summary>
-        /// Use slide template to create new PowerPoint 
-        /// </summary>
-        private async Task CreateSlidesFromTemplateAsync(PresentationDocument document, PresentationContent content)
-        {
-            var slideIndex = 0;
-
-            foreach (var slideContent in content.Slides)
-            {
-                Console.WriteLine($"Slide template is: {slideContent.Template}");
-                switch (slideContent.Template)
-                {
-                    case "TITLE":
-                        // Duplicate the first slide (index 0) and replace its content
-                        await DuplicateSlideAndReplaceContentAsync(document, 0, slideContent);
-                        break;
-                    case "4 IMAGE FEATURE":
-                        await DuplicateSlideAndReplaceContentAsync(document, 1, slideContent);
-                        break;
-                    case "3 IMAGE DETAIL":
-                        await DuplicateSlideAndReplaceContentAsync(document, 2, slideContent);
-                        break;
-                    case "DETAIL":
-                        await DuplicateSlideAndReplaceContentAsync(document, 3, slideContent);
-                        break;
-                    case "CLOSING":
-                        await DuplicateSlideAndReplaceContentAsync(document, 4, slideContent);
-                        break;
-                    default:
-                        // For any other template type, duplicate the first slide and replace content
-                        await DuplicateSlideAndReplaceContentAsync(document, 3, slideContent);
-                        break;
-                }
-                slideIndex++;
-            }
-        }
-
-
-        /// <summary>
         /// Replaces placeholders in a PowerPoint template with actual content
         /// </summary>
         private async Task ReplaceTemplatePlaceholdersAsync(PresentationDocument document, PresentationContent content)
@@ -746,7 +1104,7 @@ namespace PowerPointGenerator.Services
             if (slidesToRemove.Any())
             {
                 Console.WriteLine($"Removing {slidesToRemove.Count} extra slides from template");
-
+                
                 foreach (var slideIdToRemove in slidesToRemove)
                 {
                     try
@@ -795,10 +1153,6 @@ namespace PowerPointGenerator.Services
                 {
                     textElement.Text = slideContent.Title;
                 }
-                else if (textElement.Text.Contains("{{SUBTITLE}}") || textElement.Text.Contains("[SUBTITLE]"))
-                {
-                    textElement.Text = slideContent.Subtitle;
-                }
                 else if (textElement.Text.Contains("{{DESCRIPTION}}") || textElement.Text.Contains("[DESCRIPTION]"))
                 {
                     textElement.Text = slideContent.Description;
@@ -806,38 +1160,6 @@ namespace PowerPointGenerator.Services
                 else if (textElement.Text.Contains("{{SYNOPSIS}}") || textElement.Text.Contains("[SYNOPSIS]"))
                 {
                     textElement.Text = slideContent.Synopsis;
-                }
-                else if (textElement.Text.Contains("{{IMAGE1 TITLE}}") || textElement.Text.Contains("[IMAGE1 TITLE]"))
-                {
-                    textElement.Text = slideContent.Images[0].Title;
-                }
-                else if (textElement.Text.Contains("{{IMAGE1 SUBTITLE}}") || textElement.Text.Contains("[IMAGE1 SUBTITLE]"))
-                {
-                    textElement.Text = slideContent.Images[0].Subtitle;
-                }
-                else if (textElement.Text.Contains("{{IMAGE2 TITLE}}") || textElement.Text.Contains("[IMAGE2 TITLE]"))
-                {
-                    textElement.Text = slideContent.Images[1].Title;
-                }
-                else if (textElement.Text.Contains("{{IMAGE2 SUBTITLE}}") || textElement.Text.Contains("[IMAGE2 SUBTITLE]"))
-                {
-                    textElement.Text = slideContent.Images[1].Subtitle;
-                }
-                else if (textElement.Text.Contains("{{IMAGE3 TITLE}}") || textElement.Text.Contains("[IMAGE3 TITLE]"))
-                {
-                    textElement.Text = slideContent.Images[2].Title;
-                }
-                else if (textElement.Text.Contains("{{IMAGE3 SUBTITLE}}") || textElement.Text.Contains("[IMAGE3 SUBTITLE]"))
-                {
-                    textElement.Text = slideContent.Images[2].Subtitle;
-                }
-                else if (textElement.Text.Contains("{{IMAGE4 TITLE}}") || textElement.Text.Contains("[IMAGE4 TITLE]"))
-                {
-                    textElement.Text = slideContent.Images[3].Title;
-                }
-                else if (textElement.Text.Contains("{{IMAGE4 SUBTITLE}}") || textElement.Text.Contains("[IMAGE4 SUBTITLE]"))
-                {
-                    textElement.Text = slideContent.Images[3].Subtitle;
                 }
             }
         }
@@ -850,17 +1172,16 @@ namespace PowerPointGenerator.Services
             // Find existing images in the slide
             var pictures = slidePart.Slide.Descendants<P.Picture>().ToList();
             Console.WriteLine($"Found {pictures.Count} pictures in template slide");
-            Console.WriteLine($"Found {slideContent.Images.Count} pictures in slide content");
 
             if (!slideContent.Images.Any())
             {
                 Console.WriteLine("No images found in slide content");
-
+                
                 // Remove all image parts from the template slide if no content images
                 if (pictures.Any())
                 {
                     Console.WriteLine($"Removing {pictures.Count} image(s) from template slide");
-
+                    
                     foreach (var picture in pictures)
                     {
                         try
@@ -882,37 +1203,34 @@ namespace PowerPointGenerator.Services
                 return;
             }
 
-            for (int i=0; i < slideContent.Images.Count; i++)
-            {
-                var image = slideContent.Images[i];
-                Console.WriteLine(image.Title);
-                Console.WriteLine($"Attempting to replace image with: {image.FilePath}");
-                Console.WriteLine($"Image file exists: {File.Exists(image.FilePath)}");
-
-                if (!File.Exists(image.FilePath))
-                {
-                    Console.WriteLine($"Image file not found at: {image.FilePath}");
-                    // If image file doesn't exist, remove the template image instead
-                    if (pictures.Any())
-                    {
-                        Console.WriteLine("Removing template image since replacement image not found");
-                        pictures.First().Remove();
-                    }
-                    return;
-                }
-
-                Console.WriteLine($"Found {pictures.Count} pictures in slide");
+            var imageToReplace = slideContent.Images.First();
+            Console.WriteLine($"Attempting to replace image with: {imageToReplace.FilePath}");
+            Console.WriteLine($"Image file exists: {File.Exists(imageToReplace.FilePath)}");
             
-                if (pictures[i] != null)
+            if (!File.Exists(imageToReplace.FilePath))
+            {
+                Console.WriteLine($"Image file not found at: {imageToReplace.FilePath}");
+                // If image file doesn't exist, remove the template image instead
+                if (pictures.Any())
                 {
-                    // Replace the first image found
-                    Console.WriteLine("Replacing first picture found in slide");
-                    await ReplaceImageInPictureAsync(slidePart, pictures[i], image);
+                    Console.WriteLine("Removing template image since replacement image not found");
+                    pictures.First().Remove();
                 }
-                else
-                {
-                    Console.WriteLine("No pictures found in slide to replace");
-                }
+                return;
+            }
+
+            Console.WriteLine($"Found {pictures.Count} pictures in slide");
+            
+            if (pictures.Any())
+            {
+                // Replace the first image found
+                var firstPicture = pictures.First();
+                Console.WriteLine("Replacing first picture found in slide");
+                await ReplaceImageInPictureAsync(slidePart, firstPicture, imageToReplace);
+            }
+            else
+            {
+                Console.WriteLine("No pictures found in slide to replace");
             }
         }
 
@@ -1044,7 +1362,7 @@ namespace PowerPointGenerator.Services
                     Console.WriteLine($"Updated alt text to: {newImage.AltText}");
                 }
 
-                Console.WriteLine($"Image replacement completed. Success: {imageUpdated}");
+                Console.WriteLine($"Image replacement completeA. Success: {imageUpdated}");
                 return Task.CompletedTask;
             }
             catch (Exception ex)
@@ -1053,187 +1371,6 @@ namespace PowerPointGenerator.Services
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return Task.CompletedTask;
             }
-        }
-
-        /// <summary>
-        /// Duplicates a slide at the specified index and replaces its content
-        /// </summary>
-        /// <param name="document">The presentation document</param>
-        /// <param name="slideIndex">Index of the slide to duplicate (0-based)</param>
-        /// <param name="newSlideContent">Content for the new slide</param>
-        /// <returns>The newly created slide part</returns>
-        private async Task<SlidePart> DuplicateSlideAndReplaceContentAsync(PresentationDocument document, int slideIndex, SlideContent newSlideContent)
-        {
-            var presentationPart = document.PresentationPart;
-            if (presentationPart?.Presentation?.SlideIdList == null)
-                throw new InvalidOperationException("Presentation part is not initialized");
-
-            // Get all slide IDs from the presentation
-            var slideIds = presentationPart.Presentation.SlideIdList.Elements<SlideId>().ToList();
-            
-            if (slideIndex < 0 || slideIndex >= slideIds.Count)
-                throw new ArgumentOutOfRangeException(nameof(slideIndex), $"Slide index {slideIndex} is out of range. Available slides: 0-{slideIds.Count - 1}");
-
-            // Get the slide to duplicate
-            var sourceSlideId = slideIds[slideIndex];
-            var sourceSlidePart = (SlidePart)presentationPart.GetPartById(sourceSlideId.RelationshipId!);
-
-            Console.WriteLine($"Duplicating slide at index {slideIndex}");
-
-            // Create a new slide part
-            var newSlidePart = presentationPart.AddNewPart<SlidePart>();
-
-            // Clone the source slide structure
-            var sourceSlide = sourceSlidePart.Slide;
-            var newSlide = (Slide)sourceSlide.CloneNode(true);
-            newSlidePart.Slide = newSlide;
-
-            // Copy any related parts (like image parts, chart parts, etc.)
-            await CopySlideRelatedPartsAsync(sourceSlidePart, newSlidePart);
-
-            // Calculate next slide ID
-            uint nextSlideId = CalculateNextSlideId(presentationPart);
-
-            // Add the new slide to the presentation after the original slide
-            var newSlideIdEntry = new SlideId()
-            {
-                Id = nextSlideId,
-                RelationshipId = presentationPart.GetIdOfPart(newSlidePart)
-            };
-
-            // Insert the new slide at the end of the slide list
-            presentationPart.Presentation.SlideIdList.Append(newSlideIdEntry);
-
-            Console.WriteLine($"Created new slide with ID: {nextSlideId}");
-
-            // Replace the content of the duplicated slide
-            await ReplaceSlideContentAsync(newSlidePart, newSlideContent);
-
-            Console.WriteLine($"Replaced content for duplicated slide: '{newSlideContent.Title}'");
-
-            return newSlidePart;
-        }
-
-        /// <summary>
-        /// Copies related parts from source slide to new slide (images, charts, etc.)
-        /// </summary>
-        private async Task CopySlideRelatedPartsAsync(SlidePart sourceSlidePart, SlidePart newSlidePart)
-        {
-            try
-            {
-                // Copy image parts
-                foreach (var imagePartRel in sourceSlidePart.GetPartsOfType<ImagePart>())
-                {
-                    var sourceImagePart = imagePartRel;
-                    var newImagePart = newSlidePart.AddNewPart<ImagePart>(sourceImagePart.ContentType);
-                    
-                    // Copy the image data
-                    using (var sourceStream = sourceImagePart.GetStream())
-                    using (var targetStream = newImagePart.GetStream(FileMode.Create))
-                    {
-                        await sourceStream.CopyToAsync(targetStream);
-                    }
-
-                    // Update relationships in the new slide
-                    var sourceRelId = sourceSlidePart.GetIdOfPart(sourceImagePart);
-                    var newRelId = newSlidePart.GetIdOfPart(newImagePart);
-                    
-                    // Update all references to this image in the new slide
-                    UpdateImageReferencesInSlide(newSlidePart.Slide, sourceRelId, newRelId);
-                }
-
-                Console.WriteLine("Successfully copied related parts to new slide");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Warning: Failed to copy some related parts: {ex.Message}");
-                // Continue execution as this is not critical for basic duplication
-            }
-        }
-
-        /// <summary>
-        /// Updates image references in a slide from old relationship ID to new relationship ID
-        /// </summary>
-        private void UpdateImageReferencesInSlide(Slide slide, string oldRelId, string newRelId)
-        {
-            // Update all Blip elements that reference the old relationship ID
-            var blips = slide.Descendants<A.Blip>().Where(b => b.Embed?.Value == oldRelId);
-            foreach (var blip in blips)
-            {
-                blip.Embed = newRelId;
-            }
-        }
-
-        /// <summary>
-        /// Calculates the next available slide ID
-        /// </summary>
-        private uint CalculateNextSlideId(PresentationPart presentationPart)
-        {
-            var slideIdList = presentationPart.Presentation.SlideIdList;
-            if (slideIdList == null) return 256;
-
-            var existingIds = slideIdList.Elements<SlideId>().Select(s => s.Id?.Value ?? 0);
-            return existingIds.Any() ? existingIds.Max() + 1 : 256;
-        }
-
-        /// <summary>
-        /// Removes the template slides from the presentation document (first five)
-        /// </summary>
-        /// <param name="document">The presentation document</param>
-        /// <returns>Number of slides actually removed</returns>
-        public int RemoveTemplateSlides(PresentationDocument document)
-        {
-            var presentationPart = document.PresentationPart;
-            if (presentationPart == null)
-            {
-                Console.WriteLine("No PresentationPart found in the document.");
-                return 0;
-            }
-
-            // Get all slide IDs from the presentation
-            var slideIdList = presentationPart.Presentation.SlideIdList;
-            if (slideIdList == null)
-            {
-                Console.WriteLine("No SlideIdList found in the presentation.");
-                return 0;
-            }
-            var slideIds = slideIdList.Elements<SlideId>().ToList();
-
-            Console.WriteLine($"Total slides in presentation: {slideIds.Count}");
-
-            // Get the slides to remove (last N slides)
-            var slidesToRemoveList = slideIds.Take(5).ToList();
-            var removedCount = 0;
-
-            Console.WriteLine($"Removing the first {slidesToRemoveList.Count} slides...");
-
-            foreach (var slideIdToRemove in slidesToRemoveList)
-            {
-                try
-                {
-                    // Get the slide part
-                    var slidePart = (SlidePart)presentationPart.GetPartById(slideIdToRemove.RelationshipId!);
-                    
-                    Console.WriteLine($"Removing slide with relationship ID: {slideIdToRemove.RelationshipId}");
-
-                    // Remove the slide part from the presentation
-                    // Note: OpenXML SDK should automatically clean up associated parts and relationships
-                    presentationPart.DeletePart(slidePart);
-
-                    // Remove the slide ID from the slide list
-                    slideIdToRemove.Remove();
-
-                    removedCount++;
-                    Console.WriteLine($"Successfully removed slide {removedCount}/{slidesToRemoveList.Count}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to remove slide {slideIdToRemove.RelationshipId}: {ex.Message}");
-                }
-            }
-
-            Console.WriteLine($"Successfully removed {removedCount} slides from the presentation");
-            return removedCount;
         }
 
         /// <summary>
