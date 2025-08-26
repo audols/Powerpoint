@@ -86,6 +86,30 @@ namespace PowerPointGenerator.Services
                     }
                 }
 
+                // Parse additional images
+                if (jsonSlide.Images.Any())
+                {
+                    foreach (var jsonImage in jsonSlide.Images)
+                    {
+                        var imagePath = Path.Combine(imageBasePath, jsonImage.FilePath);
+                        Console.WriteLine($"Checking image path: {imagePath}");
+                        Console.WriteLine($"Image exists: {File.Exists(imagePath)}");
+                        if (File.Exists(imagePath))
+                        {
+                            slideContent.Images.Add(new ImageContent
+                            {
+                                FilePath = imagePath,
+                                Title = jsonImage.Title,
+                                Subtitle = jsonImage.Subtitle
+                            });
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Image file not found: {imagePath}");
+                        }
+                    }
+                }
+
                 presentationContent.Slides.Add(slideContent);
             }
 

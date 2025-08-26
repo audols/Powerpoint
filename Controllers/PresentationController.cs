@@ -131,7 +131,7 @@ namespace PowerPointGenerator.Controllers
 
                 // Determine template file to use
                 var templateName = string.IsNullOrWhiteSpace(request.TemplateName) 
-                    ? "test_template.pptx" 
+                    ? "test_template_multi_image.pptx" 
                     : request.TemplateName;
 
                 // Ensure template has .pptx extension

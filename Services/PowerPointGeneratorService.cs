@@ -753,6 +753,10 @@ namespace PowerPointGenerator.Services
                 {
                     textElement.Text = slideContent.Title;
                 }
+                else if (textElement.Text.Contains("{{SUBTITLE}}") || textElement.Text.Contains("[SUBTITLE]"))
+                {
+                    textElement.Text = slideContent.Subtitle;
+                }
                 else if (textElement.Text.Contains("{{DESCRIPTION}}") || textElement.Text.Contains("[DESCRIPTION]"))
                 {
                     textElement.Text = slideContent.Description;
@@ -761,7 +765,64 @@ namespace PowerPointGenerator.Services
                 {
                     textElement.Text = slideContent.Synopsis;
                 }
+                // Image-specific placeholders
+                else if (TryReplaceImagePlaceholder(textElement.Text, slideContent.Images, out string replacementText))
+                {
+                    textElement.Text = replacementText;
+                }
             }
+        }
+        
+        /// <summary>
+        /// Checks if text contains a placeholder in either {{}} or [] format
+        /// </summary>
+        private static bool ContainsPlaceholder(string text, string placeholder)
+        {
+            return text.Contains($"{{{{{placeholder}}}}}") || text.Contains($"[{placeholder}]");
+        }
+
+        /// <summary>
+        /// Attempts to replace image-related placeholders with appropriate content
+        /// </summary>
+        private static bool TryReplaceImagePlaceholder(string text, List<ImageContent>? images, out string replacementText)
+        {
+            replacementText = "";
+
+            // Define image placeholder patterns
+            var imagePatterns = new (string Placeholder, int Index, Func<ImageContent, string?> Selector)[]
+            {
+                ("IMAGE1 TITLE", 0, img => img.Title),
+                ("IMAGE1 SUBTITLE", 0, img => img.Subtitle),
+                ("IMAGE2 TITLE", 1, img => img.Title),
+                ("IMAGE2 SUBTITLE", 1, img => img.Subtitle),
+                ("IMAGE3 TITLE", 2, img => img.Title),
+                ("IMAGE3 SUBTITLE", 2, img => img.Subtitle),
+                ("IMAGE4 TITLE", 3, img => img.Title),
+                ("IMAGE4 SUBTITLE", 3, img => img.Subtitle)
+            };
+
+            foreach (var (placeholder, index, selector) in imagePatterns)
+            {
+                if (ContainsPlaceholder(text, placeholder))
+                {
+                    replacementText = GetImageContentSafely(images, index, selector) ?? "";
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Safely retrieves content from an image at the specified index using the provided selector
+        /// </summary>
+        private static string? GetImageContentSafely(List<ImageContent>? images, int index, Func<ImageContent, string?> selector)
+        {
+            if (images == null || index >= images.Count || index < 0)
+                return null;
+                
+            var image = images[index];
+            return image != null ? selector(image) : null;
         }
 
         /// <summary>
@@ -776,12 +837,12 @@ namespace PowerPointGenerator.Services
             if (!slideContent.Images.Any())
             {
                 Console.WriteLine("No images found in slide content");
-                
+
                 // Remove all image parts from the template slide if no content images
                 if (pictures.Any())
                 {
                     Console.WriteLine($"Removing {pictures.Count} image(s) from template slide");
-                    
+
                     foreach (var picture in pictures)
                     {
                         try
@@ -803,34 +864,79 @@ namespace PowerPointGenerator.Services
                 return;
             }
 
+            // More images than pictures - remove excess images from the end
+            if (slideContent.Images.Count > pictures.Count)
+            {
+                var excessImageCount = slideContent.Images.Count - pictures.Count;
+                var imagesToRemove = slideContent.Images.Skip(pictures.Count).ToList();
+
+                Console.WriteLine($"Warning: More images in content ({slideContent.Images.Count}) than in template ({pictures.Count}). Some images will not be used.");
+                foreach (var imageToRemove in imagesToRemove)
+                {
+                    slideContent.Images.Remove(imageToRemove);
+                }
+
+                Console.WriteLine($"Removed {excessImageCount} excess images from slideContent");
+            }
+            // More pictures than images - remove excess pictures from the end
+            else if (pictures.Count > slideContent.Images.Count)
+            {
+                var excessPictureCount = pictures.Count - slideContent.Images.Count;
+                var picturesToRemove = pictures.Skip(slideContent.Images.Count).ToList();
+
+                foreach (var pictureToRemove in picturesToRemove)
+                {
+                    try
+                    {
+                        pictureToRemove.Remove();
+                        Console.WriteLine("Removed excess picture from template slide");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to remove excess picture element: {ex.Message}");
+                    }
+                }
+
+                // Update the pictures list to reflect the removals
+                pictures.RemoveRange(slideContent.Images.Count, excessPictureCount);
+
+                Console.WriteLine($"Removed {excessPictureCount} excess pictures from template slide");
+            }
+
             var imageToReplace = slideContent.Images.First();
             Console.WriteLine($"Attempting to replace image with: {imageToReplace.FilePath}");
             Console.WriteLine($"Image file exists: {File.Exists(imageToReplace.FilePath)}");
-            
-            if (!File.Exists(imageToReplace.FilePath))
-            {
-                Console.WriteLine($"Image file not found at: {imageToReplace.FilePath}");
-                // If image file doesn't exist, remove the template image instead
-                if (pictures.Any())
-                {
-                    Console.WriteLine("Removing template image since replacement image not found");
-                    pictures.First().Remove();
-                }
-                return;
-            }
 
-            Console.WriteLine($"Found {pictures.Count} pictures in slide");
-            
-            if (pictures.Any())
+            for (int i = 0; i < slideContent.Images.Count; i++)
             {
-                // Replace the first image found
-                var firstPicture = pictures.First();
-                Console.WriteLine("Replacing first picture found in slide");
-                await ReplaceImageInPictureAsync(slidePart, firstPicture, imageToReplace);
-            }
-            else
-            {
-                Console.WriteLine("No pictures found in slide to replace");
+                var image = slideContent.Images[i];
+                Console.WriteLine($"Attempting to replace image with: {image.FilePath}");
+                Console.WriteLine($"Image file exists: {File.Exists(image.FilePath)}");
+
+                if (!File.Exists(image.FilePath))
+                {
+                    Console.WriteLine($"Image file not found at: {image.FilePath}");
+                    // If image file doesn't exist, remove the template image instead
+                    if (pictures.Any())
+                    {
+                        Console.WriteLine("Removing template image since replacement image not found");
+                        pictures.First().Remove();
+                    }
+                    return;
+                }
+
+                Console.WriteLine($"Found {pictures.Count} pictures in slide");
+
+                if (pictures[i] != null)
+                {
+                    // Replace the first image found
+                    Console.WriteLine("Replacing first picture found in slide");
+                    await ReplaceImageInPictureAsync(slidePart, pictures[i], image);
+                }
+                else
+                {
+                    Console.WriteLine("No pictures found in slide to replace");
+                }
             }
         }
 
