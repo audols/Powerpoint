@@ -1,0 +1,26 @@
+{
+  "slides": [
+    {
+      "title": "Introducing the Ultimate Can Opener",
+      "description": "Unveiling our latest innovation in kitchen appliances, designed with sophistication and precision to enhance your culinary experience.",
+      "suggested_image": "Use Image 1: edited-1753218056170.png",
+      "layout": "productshowcase"
+    },
+    {
+      "title": "Crafted for Excellence",
+      "description": "Experience unparalleled quality and durability with our premium can opener, engineered for effortless cutting and seamless operation.",
+      "suggested_image": "Use Image 2: 3-logo-1753217928905-3.png",
+      "layout": "productshowcase"
+    },
+    {
+      "title": "Sleek Design Meets Functionality",
+      "description": "Our can opener combines modern aesthetics with practical functionality, ensuring it stands out in any kitchen setting.",
+      "suggested_image": "Use Image 3: 2-logo-1753217928891-2.png"
+    },
+    {
+      "title": "Elevate Your Kitchen Experience",
+      "description": "Join the ranks of culinary enthusiasts who choose our can opener for its superior design and performance, reinforcing our brand as a leader in premium kitchen solutions.",
+      "suggested_image": "Use Image 4: 1-logo-1753217928870-1.png"
+    }
+  ]
+}

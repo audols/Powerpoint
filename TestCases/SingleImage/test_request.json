@@ -1,0 +1,7 @@
+{
+  "jsonContent": "{\"slides\":[{\"title\":\"Introducing the Ultimate Air Fryer\",\"description\":\"Unveiling our latest innovation in kitchen appliances, designed with sophistication and precision to enhance your culinary experience.\",\"suggested_image\":\"Use Image 1: Black.png\",\"layout\":\"productshowcase\"},{\"title\":\"Crafted for Excellence\",\"description\":\"Experience unparalleled quality and durability with our premium air fryer, engineered for effortless cooking and seamless operation.\",\"suggested_image\":\"Use Image 2: Gray.png\",\"layout\":\"productshowcase\"},{\"title\":\"Sleek Design Meets Functionality\",\"description\":\"Our air fryer combines modern aesthetics with practical functionality, ensuring it stands out in any kitchen setting.\",\"suggested_image\":\"Use Image 3: RoseGold.png\"},{\"title\":\"Elevate Your Kitchen Experience\",\"description\":\"Join the ranks of culinary enthusiasts who choose our air fryer for its superior design and performance, reinforcing our brand as a leader in premium kitchen solutions.\",\"suggested_image\":\"Use Image 4: Blackfarmhouse.png\"}]}",
+  "presentationName": "Template_Demo",
+  "presentationTitle": "Ultimate Air Fryer Presentation", 
+  "author": "API Test User",
+  "templateName": "test_template.pptx"
+}
