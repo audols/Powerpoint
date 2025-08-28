@@ -67,6 +67,7 @@ namespace PowerPointGenerator.Services
                 var slideContent = new SlideContent
                 {
                     Title = jsonSlide.Title,
+                    Subtitle = jsonSlide.Subtitle,
                     Description = jsonSlide.Description,
                     LayoutType = ParseLayoutType(jsonSlide.Layout)
                 };
